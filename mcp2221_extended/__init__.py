@@ -3,7 +3,7 @@ import time
 from mcp2221 import mcp2221
 
 
-def get_mcp_list(num=999, timeout=2):
+def get_mcp_list(num=999, timeout=5):
     mcps = []
     t0 = time.monotonic()
     while True:
@@ -21,11 +21,11 @@ def get_mcp_list(num=999, timeout=2):
     return mcps
 
 
-def demo_list():
-    mcps = get_mcp_list(timeout=10, num=2)
-    print(mcps)
+def demo_list(mcps=None):
+    if mcps is None:
+        mcps = get_mcp_list(timeout=10, num=2)
+        print(mcps)
 
-    disps = []
     for pos, mcp in enumerate(mcps):
         scan = mcp.i2c_scan()
         print("-"*70)

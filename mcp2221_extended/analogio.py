@@ -8,7 +8,7 @@ See `CircuitPython:analogio` in CircuitPython for more details.
 * Author(s): Carter Nelson
 """
 
-from adafruit_blinka.microcontroller.mcp2221.pin import Pin
+# from adafruit_blinka.microcontroller.mcp2221.pin import Pin
 from adafruit_blinka import ContextManaged
 
 
@@ -16,8 +16,8 @@ class AnalogIn(ContextManaged):
     """Analog Input Class"""
 
     def __init__(self, pin):
-        self._pin = Pin(pin.id)
-        self._pin.init(mode=Pin.ADC)
+        self._pin = pin # Pin(pin.id)
+        self._pin.init(mode=self._pin.ADC)
 
     @property
     def value(self):
@@ -40,8 +40,8 @@ class AnalogOut(ContextManaged):
     """Analog Output Class"""
 
     def __init__(self, pin):
-        self._pin = Pin(pin.id)
-        self._pin.init(mode=Pin.DAC)
+        self._pin = pin
+        self._pin.init(mode=self._pin.DAC)
 
     @property
     def value(self):

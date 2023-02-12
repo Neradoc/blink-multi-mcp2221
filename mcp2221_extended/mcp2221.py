@@ -8,6 +8,8 @@ import atexit
 import hid
 import os
 import time
+from .pin import Pin
+from .i2c import I2C
 
 # Here if you need it
 MCP2221_HID_DELAY = float(os.environ.get("BLINKA_MCP2221_HID_DELAY", 0))
@@ -47,6 +49,28 @@ FLASH_SETTINGS_SUBCODE = b"\x00"
 SERIAL_NUMBER_SUBCODE = b"\x04"
 
 
+class Board:
+    def __init__(self, mcp2221):
+        self._mcp = mcp2221
+
+        # create pin instances for each pin
+        self.G0 = Pin(mcp2221, 0)
+        self.G1 = Pin(mcp2221, 1)
+        self.G2 = Pin(mcp2221, 2)
+        self.G3 = Pin(mcp2221, 3)
+
+        self.SCL = Pin(mcp2221)
+        self.SDA = Pin(mcp2221)
+        self._i2c = None
+
+        self.board_id = "mcp2221"
+
+    def I2C(self):
+        if self._i2c is None:
+            self._i2c = I2C(self._mcp)
+        return self._i2c
+
+
 class MCP2221:
     """MCP2221 Device Class Definition"""
 
@@ -59,17 +83,25 @@ class MCP2221:
     GP_ALT1 = 0b011
     GP_ALT2 = 0b100
 
-    def __init__(self):
+    def __init__(self,
+            hid_delay=MCP2221_HID_DELAY,
+            reset_delay=MCP2221_RESET_DELAY
+            ):
+        self.serial_number = None
+        self.hid_delay = hid_delay
+        self.reset_delay = reset_delay
         self._hid = hid.device()
         self._hid.open(MCP2221.VID, MCP2221.PID)
         # make sure the device gets closed before exit
         atexit.register(self.close)
-        if MCP2221_RESET_DELAY >= 0:
+        if self.reset_delay >= 0:
             self._reset()
         self._gp_config = [0x07] * 4  # "don't care" initial value
         for pin in range(4):
             self.gp_set_mode(pin, self.GP_GPIO)  # set to GPIO mode
             self.gpio_set_direction(pin, 1)  # set to INPUT
+        self.board = Board(self)
+        self.serial_number = self._get_serial_number()
 
     def close(self):
         """Close the hid device. Does nothing if the device is not open."""
@@ -89,7 +121,7 @@ class MCP2221:
         # remaing bytes = 64 byte report data
         # https://github.com/libusb/hidapi/blob/083223e77952e1ef57e6b77796536a3359c1b2a3/hidapi/hidapi.h#L185
         self._hid.write(b"\0" + report + b"\0" * (64 - len(report)))
-        time.sleep(MCP2221_HID_DELAY)
+        time.sleep(self.hid_delay)
         if response:
             # return is 64 byte response report
             return self._hid.read(64)
@@ -102,8 +134,7 @@ class MCP2221:
             print('Command not supported')
         return info
 
-    @property
-    def serial_number(self):
+    def _get_serial_number(self):
         try:
             # enable serial number enumeration with enable_serial()
             return self._hid.get_serial_number_string()
@@ -197,7 +228,7 @@ class MCP2221:
     def _reset(self):
         self._hid_xfer(b"\x70\xAB\xCD\xEF", response=False)
         self._hid.close()
-        time.sleep(MCP2221_RESET_DELAY)
+        time.sleep(self.reset_delay)
         start = time.monotonic()
         while time.monotonic() - start < 5:
             try:
@@ -206,7 +237,12 @@ class MCP2221:
                 # try again
                 time.sleep(0.1)
                 continue
-            return
+            if self.serial_number is None:
+                return
+            elif self._get_serial_number() == self.serial_number:
+                return
+            else:
+                self._hid.close()
         raise OSError("open failed")
 
     # ----------------------------------------------------------------
@@ -461,4 +497,3 @@ class MCP2221:
 
     # pylint: enable=unused-argument
 
-# mpc2221 = MCP2221()

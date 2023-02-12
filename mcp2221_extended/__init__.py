@@ -1,21 +1,25 @@
-import atexit
 import time
-from mcp2221 import mcp2221
+from . import mcp2221
 
 
-def get_mcp_list(num=999, timeout=5):
+def get_mcp_list(num=999, timeout=5, debug=False):
     mcps = []
     t0 = time.monotonic()
     while True:
         try:
             mcp = mcp2221.MCP2221()
             mcps.append(mcp)
-            atexit.register(mcp.deinit)
         except OSError as err:
-            if len(mcps) >= num:
-                break
+            if debug:
+                print(len(mcps), err)
             if time.monotonic() > t0 + timeout:
+                if debug:
+                    print("get_mcp_list: Timeout")
                 break
+        if len(mcps) >= num:
+            if debug:
+                print("get_mcp_list: All found")
+            break
         time.sleep(0.1)
     mcps.sort(key=lambda m: m.serial_number)
     return mcps

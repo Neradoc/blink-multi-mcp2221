@@ -10,8 +10,8 @@ class I2C(Lockable):
     """Custom I2C Class for MCP2221"""
 
     def __init__(self, mcp2221, *, frequency=100000):
-        self._mcp2221 = mcp2221
-        self._mcp2221._i2c_configure(frequency)
+        self._mcp = mcp2221
+        self._mcp._i2c_configure(frequency)
 
     def __enter__(self):
         if threading is not None:
@@ -25,16 +25,16 @@ class I2C(Lockable):
 
     def scan(self):
         """Perform an I2C Device Scan"""
-        return self._mcp2221.i2c_scan()
+        return self._mcp.i2c_scan()
 
     # pylint: disable=unused-argument
     def writeto(self, address, buffer, *, start=0, end=None, stop=True):
         """Write data from the buffer to an address"""
-        self._mcp2221.i2c_writeto(address, buffer, start=start, end=end)
+        self._mcp.i2c_writeto(address, buffer, start=start, end=end)
 
     def readfrom_into(self, address, buffer, *, start=0, end=None, stop=True):
         """Read data from an address and into the buffer"""
-        self._mcp2221.i2c_readfrom_into(address, buffer, start=start, end=end)
+        self._mcp.i2c_readfrom_into(address, buffer, start=start, end=end)
 
     def writeto_then_readfrom(
         self,
@@ -51,7 +51,7 @@ class I2C(Lockable):
         """Write data from buffer_out to an address and then
         read data from an address and into buffer_in
         """
-        self._mcp2221.i2c_writeto_then_readfrom(
+        self._mcp.i2c_writeto_then_readfrom(
             address,
             buffer_out,
             buffer_in,
